@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "A a Professional BAckend",
   "main": "index.js",
-  "type":"module",
+  "type": "module",
   "scripts": {
-    "test": "nodemon src/index.js"
+    "dev": "nodemon src/index.js"
   },
   "keywords": [
     "javascript",
@@ -13,5 +13,8 @@
     "confidence"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
 }
