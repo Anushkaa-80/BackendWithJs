@@ -19,7 +19,7 @@ const registerUser = asyncHandler(async (req, res) => {
   //check for user creation
   // return res
 
-  const { fulName, email, username, password } = req.body; // req me json se data ayega
+  const { fullName, email, username, password } = req.body; // req me json se data ayega
   console.log("email: ", email);
   /*  if( fullName === "")
       {
@@ -35,7 +35,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   //yeh sab fields hai toh ab check karenge ki yeh email ya username already exist toh nahi karta
 
-  const existedUser = User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
   if (existedUser) {
