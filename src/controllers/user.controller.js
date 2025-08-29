@@ -4,6 +4,24 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken(); // they are methods o bracjets are required
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something Went wrong while generating refresh and access tokens"
+    );
+  }
+};
+
 const registerUser = asyncHandler(async (req, res) => {
   // res.status(200).json({
   //     message:"hurrayyy!! its workingg!!!! "
@@ -44,8 +62,19 @@ const registerUser = asyncHandler(async (req, res) => {
   // req.body se saara adata ata hai, middleware request ke andr aur fields add krta hai
   // multer gives the access of files
   // the path uploaed by multer will be available
+  console.log(req.files);
+
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  //const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
@@ -58,24 +87,83 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar is required");
   }
 
- const user = await User.create({
+  const user = await User.create({
     fullName,
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
     password,
     username: username.toLowerCase(),
-  })
-  const createdUser= await User.findById(user._id).select(
-    "-password -refreshToken");
-    if(!createdUser)
-    {
-        throw new ApiError("User creation failed", 500);
-    }
-    return res.status(201).json(
-
-        new ApiResponse(200, createdUser, "User registered successfully")
-    )
+  });
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+  if (!createdUser) {
+    throw new ApiError("User creation failed", 500);
+  }
+  return res
+    .status(201)
+    .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
-export { registerUser };
+const loginUser = asyncHandler(async (req, res) => {
+  //req body-> data
+  //username or email
+  // ffind the user
+  // password check
+  // access and refreh token
+  //send cookie
+  const { email, username, password } = req.body;
+
+  if (!username || !email) {
+    throw new ApiError(400, "username or email is required");
+  }
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  //User: it is the object of the mongo db mongoose
+  // hmara "user" hai
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid user credentials");
+  }
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  ); //method calling
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+    //select includes what we dont want
+  );
+  const options = {
+    httpOnly: true, // it  means you can only  modify the cookie from the server
+    secure: true, // it means the cookie will only be sent over HTTPS
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        }, // it means we are sending the user details along with the tokens
+
+        "User logged in successfully"
+      )
+    );
+});
+
+export { registerUser, loginUser };
+ 
+// detailed summary of above
+// The above code exports two functions, registerUser and loginUser, which handle user registration and login respectively. 
+// Both functions use async/await syntax for handling asynchronous operations and return appropriate API responses using the ApiResponse class.
