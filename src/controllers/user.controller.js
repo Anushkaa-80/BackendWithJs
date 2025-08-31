@@ -6,12 +6,12 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId); // find user 1st
     const accessToken = user.generateAccessToken(); // they are methods o bracjets are required
-    const refreshToken = user.generateRefreshToken();
+    const refreshToken = user.generateRefreshToken(); //refresh tokens are stored in DB because they are long lived tokens
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    user.refreshToken = refreshToken; // we have to save the refresh token in DB
+    await user.save({ validateBeforeSave: false }); // we are not validating the user before saving
 
     return { accessToken, refreshToken };
   } catch (error) {
@@ -119,7 +119,8 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "username or email is required");
   }
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    // returns the 1st entry from DB,
+    $or: [{ username }, { email }], // mongo db operators, finds data on the basis of username or email
   });
 
   if (!user) {
@@ -134,12 +135,15 @@ const loginUser = asyncHandler(async (req, res) => {
   }
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id
-  ); //method calling
+  ); // we are passing user id to generate tokens
+  // const { accessToken, refreshToken } is way to extract multiple properties from an object
 
+  //we don't want to send password and refresh token to the user because they are sensitive information
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
     //select includes what we dont want
   );
+  //we are sending cookies below
   const options = {
     httpOnly: true, // it  means you can only  modify the cookie from the server
     secure: true, // it means the cookie will only be sent over HTTPS
@@ -154,7 +158,7 @@ const loginUser = asyncHandler(async (req, res) => {
         {
           user: loggedInUser,
           accessToken,
-          refreshToken,
+          refreshToken, // we are sending the refresh token as a cookie, user wants to save both token by own
         }, // it means we are sending the user details along with the tokens
 
         "User logged in successfully"
@@ -162,8 +166,34 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser };
- 
+const logoutUser = asyncHandler(async (req, res) => {
+  //remove cookie,
+  // reset refresh token
+  // if you have true login access of refresh and access token -> if yes then i will add the new object to req: req.user
+
+await  User.findByIdAndUpdate(req.user._id, {
+    $set: {
+      refreshToken: undefined,
+     },
+    
+  },
+{
+    new: true 
+})
+
+  const options ={
+    httpOnly: true,
+    secure: true
+  }
+   return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+
+export { registerUser, loginUser, logoutUser };
+
 // detailed summary of above
-// The above code exports two functions, registerUser and loginUser, which handle user registration and login respectively. 
+// The above code exports two functions, registerUser and loginUser, which handle user registration and login respectively.
 // Both functions use async/await syntax for handling asynchronous operations and return appropriate API responses using the ApiResponse class.
