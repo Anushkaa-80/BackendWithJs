@@ -392,9 +392,33 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
           }
         }
       }
+    },
+    {  //project will show only selected stuffs
+      $project:{
+        fullName:1,
+        username:1,
+        subscribersCount:1,
+        channelSubscribedTocount:1,
+        isSubscribed:1,
+        avatar:1,
+        coverImage:1,
+        email:1
+      }
     }
   ]);
   // we get arrays as a value from aggregate pipeline
+
+if(!channel?.length)
+{
+  throw new ApiError(404, "Channel does not exists")
+
+}
+return res
+.status(200)
+.json(
+  new ApiResponse(200,channel[0],"User channel fetched successfully")
+)
+
 });
 
 export {
