@@ -65,8 +65,8 @@ const registerUser = asyncHandler(async (req, res) => {
   // multer gives the access of files
   // the path uploaed by multer will be available
   console.log(req.files);
- 
-  const avatarLocalPath = req.files?.avatar[0]?.path;// taken multiple files because we are providing options to user to select from multiple files
+
+  const avatarLocalPath = req.files?.avatar[0]?.path; // taken multiple files because we are providing options to user to select from multiple files
   //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
   let coverImageLocalPath;
@@ -246,7 +246,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-  const { oldPassword, newPassword} = req.body;
+  const { oldPassword, newPassword } = req.body;
 
   const user = await User.findById(req.user?._id);
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -261,108 +261,152 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password Changed Successfully"));
 });
 
-const getCurrentUser = asyncHandler(async(req,res)=>{
+const getCurrentUser = asyncHandler(async (req, res) => {
   return res
-  .status(200)
-  .json(new ApiResponse(200,req.user, "current user fetched successfully"))
-})
+    .status(200)
+    .json(new ApiResponse(200, req.user, "current user fetched successfully"));
+});
 
-
-const updateAccountDetails= asyncHandler(async(req,res)=>{
-  const {fullName, email} = req.body
-  if(!fullName || !email)
-  {
-    throw new ApiError (400, "All fields are required")
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+  if (!fullName || !email) {
+    throw new ApiError(400, "All fields are required");
   }
-  const user = await User.findByIdAndUpdate (
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $set :{
+      $set: {
         fullName: fullName,
-      email: email,
-      }
+        email: email,
+      },
     },
     {
-      new: true
+      new: true,
     }
-  ).select("-password")
+  ).select("-password");
 
   return res
-  .status(200)
-  .json( new ApiResponse (200, user, "Account details updated successfully"))
-})
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
+});
 
-
-const updateUserAvatar = asyncHandler(async(req,res)=>{
-
+const updateUserAvatar = asyncHandler(async (req, res) => {
   //yha pe sirf ek file chahiye
- const avatarLocalPath= req.file?.path
+  const avatarLocalPath = req.file?.path;
 
- if(!avatarLoacalPath)
- {
-  throw new ApiError(400, "Avatar file is missing")
- }
- // TODO: delete old image - assignment
+  if (!avatarLoacalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+  // TODO: delete old image - assignment
 
- const avatar = await uploadOnCloudinary(avatarLocalPath)
- if(!avatar.url)
- {
-  throw new ApiError(400, "Error while uploading on avatar")
- }
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while uploading on avatar");
+  }
 
-const user =  await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?.id,
     {
-      $set:{
-        avatar: avatar.url
-      }
+      $set: {
+        avatar: avatar.url,
+      },
     },
-    {new:true}
-  ).select("-password")
+    { new: true }
+  ).select("-password");
   return res
-  .status(200)
-  .json(
-    new ApiResponse(200,user,"Avatar updated successfully")
-  )
-})
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar updated successfully"));
+});
 
-
-const updateUserCoverImage= asyncHandler(async(req,res)=>{
-
+const updateUserCoverImage = asyncHandler(async (req, res) => {
   //yha pe sirf ek file chahiye
- const coverImageLocalPath= req.file?.path
+  const coverImageLocalPath = req.file?.path;
 
- if(!avatarLoacalPath)
- {
-  throw new ApiError(400, "Cover image file is missing")
- }
+  if (!avatarLoacalPath) {
+    throw new ApiError(400, "Cover image file is missing");
+  }
 
- const coverImage = await uploadOnCloudinary(coverImageLocalPath)
- if(!coverImage.url)
- {
-  throw new ApiError(400, "Error while uploading on cover Image")
- }
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (!coverImage.url) {
+    throw new ApiError(400, "Error while uploading on cover Image");
+  }
 
- const user = await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?.id,
     {
-      $set:{
-        coverImage: coverImage.url
-      }
+      $set: {
+        coverImage: coverImage.url,
+      },
     },
-    {new:true}
-  ).select("-password")
+    { new: true }
+  ).select("-password");
 
   return res
-  .status(200)
-  .json(
-    new ApiResponse(200,user,"Cover Image updated successfully")
-  )
+    .status(200)
+    .json(new ApiResponse(200, user, "Cover Image updated successfully"));
+});
 
-})
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params; // from url we get thw username
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser ,updateAccountDetails,
-  updateUserAvatar,updateUserCoverImage
+  if (!username?.trim()) {
+    throw new ApiError(400, "Username is missing");
+  }
+
+  // 1st we will find the document from the username using query
+
+  await User.aggregate([
+    {
+      $match: { username: username.toLowerCase() },
+    },
+    {
+      $lookup:{
+        from: "subscriptions" , // in model: lowercase and plural
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers"
+      }
+    },
+    {
+      $lookup:{
+       from: "subscriptions" , // in model: lowercase and plural
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"subscribedTo"
+      },
+      
+    },
+    {
+      $addFields:{
+        subscribersCount:{
+          $size:"$subscribers"
+        },
+        channelsSubscribedToCount:{
+          $size:"$subscribedTo"
+        },
+        isSubscribed:{
+          $cond:{
+            if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+            then:true,
+            else: false
+          }
+        }
+      }
+    }
+  ]);
+  // we get arrays as a value from aggregate pipeline
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
 };
 
 // detailed summary of above
