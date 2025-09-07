@@ -355,9 +355,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
   // 1st we will find the document from the username using query
 
-  await User.aggregate([
+  // direct use of aggregate pipeline
+ const channel= await User.aggregate([
     {
-      $match: { username: username.toLowerCase() },
+      $match: { username: username?.toLowerCase() }, // finds 1 document
     },
     {
       $lookup:{
@@ -393,7 +394,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         }
       }
     },
-    {  //project will show only selected stuffs
+    {  //project will show only selected stuffs , passon value ko 1 de do
       $project:{
         fullName:1,
         username:1,
@@ -421,6 +422,70 @@ return res
 
 });
 
+const getWatchHistory = asyncHandler(async(req,res) => 
+{
+ const user = await User.aggregate([
+
+
+  {
+    $match:{
+      _id:new mongoose.Types.ObjectId(req.user._id)
+    }
+  },
+  {
+    $lookup:{
+      from :"videos",
+      localField:"watchHistory",
+      foreignField:"_id",
+      as:"watchHistory",
+      pipeline: [
+        {
+          $lookup: {
+            from:"users",
+            localField:"owner",
+            foreignField:"_id",
+            as:"owner",
+            pipeline: [
+
+            {
+              $project:{
+                fullName: 1,
+                username: 1,
+                avatar: 1
+              }
+            }
+            ]
+          }
+        },
+        {
+          $addFields:{
+            owner:{
+              //we can use array element at
+              $first:"$owner"
+            }
+          }
+        }
+      ]
+    }
+  }
+ ])  
+
+
+
+ return res
+ .status(200)
+ .json
+ (
+  new ApiResponse(200,
+    user[0].watchHistory,
+    "watch history fetched successfully"
+  )
+ )
+  // it will get you the mongo id  mongoose BTS change it to mongodb ,id it will give string.
+})
+
+
+
 export {
   registerUser,
   loginUser,
@@ -431,6 +496,7 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getWatchHistory
 };
 
 // detailed summary of above
