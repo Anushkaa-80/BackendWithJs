@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 
-export const verifyJWT = asyncHandler(async (req, res, next) => {
+export const verifyJWT = asyncHandler(async (req, _, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ","")
          
@@ -19,7 +19,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         throw new ApiError(401,"Invalid access token")
        }
        req.user= user;
-       next();
+       next()
        // middleware routes me use
     } catch (error) {
         throw new ApiError(401, error?.message || "Invalid access token")
