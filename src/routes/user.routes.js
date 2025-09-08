@@ -15,7 +15,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { createTweet } from "../controllers/tweet.controller.js";
+import { createTweet,getUserTweets , updateTweet} from "../controllers/tweet.controller.js";
 
 const router = Router();
 
@@ -49,5 +49,8 @@ router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
 
 router.route("/history").get(verifyJWT, getWatchHistory);
 router.route("/create-tweet").post(verifyJWT,createTweet)
+router.route("/my-tweets").get(verifyJWT, getUserTweets)
+router.route("/tweets/:tweetId").patch(verifyJWT, updateTweet);
+
 
 export default router;

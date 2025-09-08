@@ -38,11 +38,54 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
+    //1.fetch user id
+    //2.fetch tweet from database
+
+    const userId= req.user._id;
+     const fetchTweets= await Tweet.find({owner: userId});//find the twwet done by given user id 
+    return res.status(200).json(new ApiResponse(200, fetchTweets,"User tweeet is fetched"));
 })
 
 const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
+ const {tweetId} = req.params;
+ const {content} = req.body;
+
+ if(!tweetId)
+ {
+    throw new ApiError(400, "Tweet doesnt exist")
+ }
+ if(!content || !content.trim())
+ {
+    throw new ApiError(400, "tweet-Content is required");
+ }
+ const tweet = await Tweet.findById(tweetId)
+ if(!tweet)
+ {
+    throw new ApiError(404, "Tweet doesnt exist");
+ }
+
+if (tweet.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to update this tweet");
+}
+// tweet.content = content;  // naya content update karo
+// await tweet.save();        // DB me save karo
+const updatedTweet = await Tweet.findByIdAndUpdate(
+    tweetId,
+    { content },
+    { new: true }  // updated tweet return karega
+);
+   return res.status(200).json(new ApiResponse(
+    200,
+ updatedTweet,  // ya updatedTweet agar findByIdAndUpdate use kiya
+    "Tweet updated successfully"
+));
+
+
 })
+
+
+
 
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
