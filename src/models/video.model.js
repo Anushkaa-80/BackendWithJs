@@ -5,7 +5,7 @@ const videoSchema = new Schema(
   {
     videoFile: {
       type: String, //cloudinanyr
-      requitred: true,
+      required: true,
     },
     thumbnails: {
       type: String,
