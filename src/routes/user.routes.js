@@ -16,6 +16,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { createTweet,getUserTweets , updateTweet, deleteTweet} from "../controllers/tweet.controller.js";
+import { publishAVideo } from "../controllers/video.controller.js";
 
 const router = Router();
 
@@ -52,6 +53,19 @@ router.route("/create-tweet").post(verifyJWT,createTweet)
 router.route("/my-tweets").get(verifyJWT, getUserTweets)
 router.route("/tweets/:tweetId").patch(verifyJWT, updateTweet);
 router.route("/tweets/:tweetId").delete(verifyJWT, deleteTweet);
+
+router.route("/publish").post(verifyJWT,
+  upload.fields([
+    {
+      name:"videoFile",
+      maxCount:1
+    },
+    {
+      name:"thumbnail",
+      maxCount:1
+    }
+  ]),publishAVideo
+)
 
 
 export default router;

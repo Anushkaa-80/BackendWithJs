@@ -98,6 +98,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
         throw new ApiError(404,"Tweet NOt Found");
     }
     //3. Check Ownership
+//     tweet.owner = jis user ne tweet banaya tha (DB me stored ObjectId of User)
+// req.user._id = currently logged-in user ka id (JWT verify karne ke baad middleware ne set kiya hai).
+// tweet.owner = creator of tweet
+// req.user._id = current user      toTring because mongoose ka ObjectId ek special object hota hai, normal string nahi.
      if (tweet.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "You are not authorized to update this tweet");}
      // 4. Delete tweet
