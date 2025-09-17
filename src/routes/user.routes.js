@@ -16,7 +16,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { createTweet,getUserTweets , updateTweet, deleteTweet} from "../controllers/tweet.controller.js";
-import { publishAVideo } from "../controllers/video.controller.js";
+import { getVideoById, publishAVideo } from "../controllers/video.controller.js";
 
 const router = Router();
 
@@ -66,6 +66,7 @@ router.route("/publish").post(verifyJWT,
     }
   ]),publishAVideo
 )
+router.route("/videos/:videoId").get(verifyJWT, getVideoById);
 
 
 export default router;
